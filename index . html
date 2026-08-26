@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Rush 🚀</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #080b18;
+  color: white;
+  overflow: hidden;
+}
+
+#game {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 20%, #202a55 0%, #080b18 55%);
+}
+
+.star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: white;
+  border-radius: 50%;
+  opacity: .8;
+}
+
+#player {
+  position: absolute;
+  width: 55px;
+  height: 55px;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 45px;
+  user-select: none;
+}
+
+.enemy {
+  position: absolute;
+  font-size: 40px;
+  top: -60px;
+}
+
+.coin {
+  position: absolute;
+  font-size: 30px;
+  top: -50px;
+}
+
+#hud {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  right: 15px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+  z-index: 10;
+}
+
+#startScreen,
+#gameOver {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.78);
+  z-index: 20;
+  text-align: center;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+button {
+  margin-top: 20px;
+  padding: 14px 30px;
+  border: none;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #111;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+button:active {
+  transform: scale(.95);
+}
+
+.hidden {
+  display: none !important;
+}
+
+#controls {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  z-index: 15;
+}
+
+.control {
+  width: 70px;
+  height: 55px;
+  border-radius: 15px;
+  background: rgba(255,255,255,.18);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 25px;
+  user-select: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+  <div id="hud">
+    <div>⭐ Score: <span id="score">0</span></div>
+    <div>🪙 Coins: <span id="coins">0</span></div>
+    <div>🏆 Best: <span id="best">0</span></div>
+  </div>
+
+  <div id="player">🚀</div>
+
+  <div id="controls">
+    <div class="control" id="left">⬅️</div>
+    <div class="control" id="right">➡️</div>
+  </div>
+
+  <div id="startScreen">
+    <h1>🚀 SPACE RUSH</h1>
+    <p>Dodge the meteors and collect coins!</p>
+    <button onclick="startGame()">START GAME</button>
+  </div>
+
+  <div id="gameOver" class="hidden">
+    <h1>💥 GAME OVER</h1>
+    <p>Your Score: <span id="finalScore">0</span></p>
+    <button onclick="startGame()">PLAY AGAIN</button>
+  </div>
+
+</div>
+
+<script>
+
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+
+const scoreText = document.getElementById("score");
+const coinsText = document.getElementById("coins");
+const bestText = document.getElementById("best");
+
+const gameOverScreen = document.getElementById("gameOver");
+const startScreen = document.getElementById("startScreen");
+
+let score = 0;
+let coins = 0;
+let running = false;
+let playerX = 50;
+let speed = 4;
+
+let best = Number(localStorage.getItem("spaceRushBest")) || 0;
+bestText.textContent = best;
+
+let enemies = [];
+let coinObjects = [];
+
+
+// Create stars
+for(let i = 0; i < 70; i++) {
+
+  const star = document.createElement("div");
+
+  star.className = "star";
+
+  star.style.left = Math.random() * 100 + "%";
+  star.style.top = Math.random() * 100 + "%";
+
+  star.style.opacity = Math.random();
+
+  game.appendChild(star);
+}
+
+
+// Start game
+function startGame() {
+
+  score = 0;
+  coins = 0;
+  speed = 4;
+  playerX = 50;
+
+  scoreText.textContent = score;
+  coinsText.textContent = coins;
+
+  enemies.forEach(e => e.remove());
+  coinObjects.forEach(c => c.remove());
+
+  enemies = [];
+  coinObjects = [];
+
+  player.style.left = playerX + "%";
+
+  startScreen.classList.add("hidden");
+  gameOverScreen.classList.add("hidden");
+
+  running = true;
+}
+
+
+// Move player
+function moveLeft() {
+
+  if(!running) return;
+
+  playerX -= 5;
+
+  if(playerX < 5)
+    playerX = 5;
+
+  player.style.left = playerX + "%";
+}
+
+
+function moveRight() {
+
+  if(!running) return;
+
+  playerX += 5;
+
+  if(playerX > 95)
+    playerX = 95;
+
+  player.style.left = playerX + "%";
+}
+
+
+// Keyboard controls
+document.addEventListener("keydown", e => {
+
+  if(e.key === "ArrowLeft")
+    moveLeft();
+
+  if(e.key === "ArrowRight")
+    moveRight();
+
+});
+
+
+// Mobile controls
+document.getElementById("left").addEventListener("touchstart", e => {
+  e.preventDefault();
+  moveLeft();
+});
+
+document.getElementById("right").addEventListener("touchstart", e => {
+  e.preventDefault();
+  moveRight();
+});
+
+
+// Mouse controls
+document.getElementById("left").addEventListener("click", moveLeft);
+document.getElementById("right").addEventListener("click", moveRight);
+
+
+// Create enemy
+function createEnemy() {
+
+  if(!running) return;
+
+  const enemy = document.createElement("div");
+
+  enemy.className = "enemy";
+  enemy.textContent = "☄️";
+
+  enemy.style.left = Math.random() * 90 + 5 + "%";
+
+  game.appendChild(enemy);
+
+  enemies.push(enemy);
+}
+
+
+// Create coin
+function createCoin() {
+
+  if(!running) return;
+
+  const coin = document.createElement("div");
+
+  coin.className = "coin";
+  coin.textContent = "🪙";
+
+  coin.style.left = Math.random() * 90 + 5 + "%";
+
+  game.appendChild(coin);
+
+  coinObjects.push(coin);
+}
+
+
+// Collision detection
+function collision(a,b) {
+
+  const r1 = a.getBoundingClientRect();
+  const r2 = b.getBoundingClientRect();
+
+  return !(
+    r1.right < r2.left ||
+    r1.left > r2.right ||
+    r1.bottom < r2.top ||
+    r1.top > r2.bottom
+  );
+}
+
+
+// Game loop
+function gameLoop() {
+
+  if(!running) {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  enemies.forEach((enemy,index) => {
+
+    let top = enemy.offsetTop;
+
+    top += speed;
+
+    enemy.style.top = top + "px";
+
+    if(collision(player, enemy)) {
+
+      endGame();
+
+    }
+
+    if(top > window.innerHeight) {
+
+      enemy.remove();
+
+      enemies.splice(index,1);
+
+      score++;
+
+      scoreText.textContent = score;
+
+      // Gradually increase challenge
+      if(score % 10 === 0) {
+        speed += .5;
+      }
+    }
+
+  });
+
+
+  coinObjects.forEach((coin,index) => {
+
+    let top = coin.offsetTop;
+
+    top += speed * .8;
+
+    coin.style.top = top + "px";
+
+    if(collision(player, coin)) {
+
+      coins++;
+
+      coinsText.textContent = coins;
+
+      coin.remove();
+
+      coinObjects.splice(index,1);
+
+    }
+
+    if(top > window.innerHeight) {
+
+      coin.remove();
+
+      coinObjects.splice(index,1);
+
+    }
+
+  });
+
+
+  requestAnimationFrame(gameLoop);
+}
+
+
+// End game
+function endGame() {
+
+  running = false;
+
+  document.getElementById("finalScore").textContent = score;
+
+  if(score > best) {
+
+    best = score;
+
+    localStorage.setItem("spaceRushBest", best);
+
+    bestText.textContent = best;
+  }
+
+  gameOverScreen.classList.remove("hidden");
+}
+
+
+// Spawn enemies
+setInterval(() => {
+
+  if(running)
+    createEnemy();
+
+}, 900);
+
+
+// Spawn coins
+setInterval(() => {
+
+  if(running)
+    createCoin();
+
+}, 1400);
+
+
+// Start loop
+gameLoop();
+
+</script>
+
+</body>
+</html># samarth3939.github.io
